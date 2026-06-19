@@ -1,0 +1,212 @@
+@prefix oeso: <https://mirrordrop.org/ontologies/core/oeso#> .
+@prefix ex:   <https://example.org/vessel-mirror/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ================================================================
+#  Vessel Tracking — OESO Example
+#
+#  Two sources independently describe the same vessel.
+#  Each produces its own Entity UUID at ingest time.
+#  An EntityEquivalenceActivity resolves them to a canonical UUID.
+#  BEES uses the canonical entity to resolve best attribute values.
+#
+#  Sources:
+#    ex:distribution/ais-feed-20260610     — AIS transponder feed
+#    ex:distribution/port-registry-20260610 — Port authority registry
+# ================================================================
+
+
+# ================================================================
+#  Organizations
+# ================================================================
+
+ex:org/maritime-traffic-service
+    a            oeso:Organization ;
+    rdfs:label   "Maritime Traffic Service" .
+
+ex:org/rotterdam-port-authority
+    a            oeso:Organization ;
+    rdfs:label   "Rotterdam Port Authority" .
+
+
+# ================================================================
+#  Datasets
+# ================================================================
+
+ex:dataset/ais-feed
+    a            dcat:Dataset ;
+    rdfs:label   "AIS Vessel Feed" .
+
+ex:dataset/port-registry
+    a            dcat:Dataset ;
+    rdfs:label   "Rotterdam Port Registry" .
+
+
+# ================================================================
+#  Distributions
+# ================================================================
+
+ex:distribution/ais-feed-20260610
+    a                      dcat:Distribution ;
+    rdfs:label             "AIS Feed snapshot 2026-06-10" ;
+    dcat:isDistributionOf  ex:dataset/ais-feed .
+
+ex:distribution/port-registry-20260610
+    a                      dcat:Distribution ;
+    rdfs:label             "Port Registry snapshot 2026-06-10" ;
+    dcat:isDistributionOf  ex:dataset/port-registry .
+
+
+# ================================================================
+#  Entities
+#  Two UUIDs minted at ingest time — one per source.
+#  Neither is canonical until EntityEquivalence resolves them.
+# ================================================================
+
+ex:entity/vessel-ais-001
+    a          oeso:Entity ;
+    rdfs:label "Vessel from AIS feed" .
+
+ex:entity/vessel-port-001
+    a          oeso:Entity ;
+    rdfs:label "Vessel from port registry" .
+
+ex:entity/vessel-canonical-001
+    a          oeso:Entity ;
+    rdfs:label "Atlantic Star — canonical entity" .
+
+
+# ================================================================
+#  States
+#  Each source produces one State describing the vessel.
+#  Both carry the same canonicalIdentifier (IMO number) —
+#  this is the input to entity resolution, not the UUID.
+# ================================================================
+
+ex:state/ais-vessel-001
+    a                         oeso:State ;
+    oeso:hasSource            ex:distribution/ais-feed-20260610 ;
+    oeso:hasStateDate         "2026-06-10T00:00:00Z"^^xsd:dateTime ;
+    oeso:hasStateCreationDate "2026-06-10T06:00:00Z"^^xsd:dateTime ;
+    oeso:canonicalIdentifier  "IMO9234567" ;
+    ex:vesselName             "Atlantic Star" ;
+    ex:callSign               "VQAB3" ;
+    ex:flag                   "Bahamas" .
+
+ex:state/port-vessel-001
+    a                         oeso:State ;
+    oeso:hasSource            ex:distribution/port-registry-20260610 ;
+    oeso:hasStateDate         "2026-06-10T00:00:00Z"^^xsd:dateTime ;
+    oeso:hasStateCreationDate "2026-06-10T07:00:00Z"^^xsd:dateTime ;
+    oeso:canonicalIdentifier  "IMO9234567" ;
+    ex:vesselName             "ATLANTIC STAR" ;
+    ex:portOfRegistry         "Nassau" ;
+    ex:grossTonnage           "45000"^^xsd:integer .
+
+
+# ================================================================
+#  Acquisition Activities
+#  Each source acquisition is a distinct activity with its own
+#  timestamp. prov:startedAtTime is mandatory on all StateActivities.
+# ================================================================
+
+ex:activity/acquire-ais-20260610
+    a                   oeso:AcquisitionActivity ;
+    prov:startedAtTime  "2026-06-10T06:00:00Z"^^xsd:dateTime ;
+    prov:generated      ex:state/ais-vessel-001 .
+
+ex:activity/acquire-port-20260610
+    a                   oeso:AcquisitionActivity ;
+    prov:startedAtTime  "2026-06-10T07:00:00Z"^^xsd:dateTime ;
+    prov:generated      ex:state/port-vessel-001 .
+
+
+# ================================================================
+#  Entity Assignments
+#  Each State is assigned to its source-specific Entity UUID.
+#  Produced by EntityAssignmentActivities.
+# ================================================================
+
+ex:activity/assign-ais-vessel-001
+    a                  oeso:EntityAssignmentActivity ;
+    prov:startedAtTime "2026-06-10T06:01:00Z"^^xsd:dateTime ;
+    prov:generated     ex:assignment/ais-vessel-001 .
+
+ex:assignment/ais-vessel-001
+    a                    oeso:EntityAssignment ;
+    oeso:assignsState    ex:state/ais-vessel-001 ;
+    oeso:assignsToEntity ex:entity/vessel-ais-001 .
+
+ex:activity/assign-port-vessel-001
+    a                  oeso:EntityAssignmentActivity ;
+    prov:startedAtTime "2026-06-10T07:01:00Z"^^xsd:dateTime ;
+    prov:generated     ex:assignment/port-vessel-001 .
+
+ex:assignment/port-vessel-001
+    a                    oeso:EntityAssignment ;
+    oeso:assignsState    ex:state/port-vessel-001 ;
+    oeso:assignsToEntity ex:entity/vessel-port-001 .
+
+
+# ================================================================
+#  Entity Equivalence
+#  Resolution logic matched IMO9234567 across both sources.
+#  Confidence 0.98 — high, driven by IMO number exact match.
+#  sameRealWorldEntity designates the canonical UUID.
+#  Both source UUIDs are retained permanently for provenance.
+# ================================================================
+
+ex:activity/resolve-vessel-equivalence-001
+    a                  oeso:EntityEquivalenceActivity ;
+    prov:startedAtTime "2026-06-10T08:00:00Z"^^xsd:dateTime ;
+    prov:used          ex:state/ais-vessel-001 ;
+    prov:used          ex:state/port-vessel-001 ;
+    prov:generated     ex:equivalence/vessel-001 .
+
+ex:equivalence/vessel-001
+    a                          oeso:EntityEquivalence ;
+    oeso:hasEntity             ex:entity/vessel-ais-001 ;
+    oeso:hasEntity             ex:entity/vessel-port-001 ;
+    oeso:sameRealWorldEntity   ex:entity/vessel-canonical-001 ;
+    oeso:equivalenceConfidence "0.98"^^xsd:decimal .
+
+
+# ================================================================
+#  Attribute Mapping
+#  Both sources carry a vessel name field but use different
+#  casing conventions. AttributeMapping asserts they represent
+#  the same real-world concept.
+# ================================================================
+
+ex:activity/map-vessel-name-001
+    a                  oeso:AttributeMappingActivity ;
+    prov:startedAtTime "2026-06-10T08:05:00Z"^^xsd:dateTime ;
+    prov:generated     ex:mapping/vessel-name-001 .
+
+ex:mapping/vessel-name-001
+    a                  oeso:AttributeMapping ;
+    oeso:mapsAttribute ex:vesselName ;
+    oeso:mapsAttribute ex:vesselName ;
+    oeso:attributeMappingScope ex:distribution/ais-feed-20260610 ;
+    oeso:attributeMappingScope ex:distribution/port-registry-20260610 .
+
+
+# ================================================================
+#  Assessment
+#  AIS feed assessed as higher authority for vessel identity
+#  attributes — data comes directly from the vessel transponder.
+# ================================================================
+
+ex:activity/assess-ais-feed-001
+    a                  oeso:AssessmentActivity ;
+    prov:startedAtTime "2026-06-10T09:00:00Z"^^xsd:dateTime ;
+    prov:generated     ex:assessment/ais-feed-001 .
+
+ex:assessment/ais-feed-001
+    a                    oeso:Assessment ;
+    oeso:hasAssessment   ex:distribution/ais-feed-20260610 ;
+    oeso:assessmentDate  "2026-06-10T09:00:00Z"^^xsd:dateTime ;
+    rdfs:comment         "AIS transponder data — primary authority for vessel identity and position." .

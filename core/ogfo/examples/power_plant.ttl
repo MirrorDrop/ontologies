@@ -1,0 +1,158 @@
+@prefix oeso: <https://mirrordrop.org/ontologies/core/oeso#> .
+@prefix ogfo: <https://mirrordrop.org/ontologies/core/ogfo#> .
+@prefix ex:   <https://example.org/power-mirror/> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ================================================================
+#  Power Plant — OGFO Example
+#
+#  A power plant entity described by a GeospatialState from a
+#  fictional energy regulatory dataset. The GeospatialState carries
+#  geometry alongside other facility attributes — all from the
+#  same source in a single State. Geometry is not special; it is
+#  simply mandatory on ogfo:GeospatialState.
+#
+#  Source:
+#    ex:distribution/energy-registry-20260101 — fictional energy
+#    regulatory dataset snapshot
+# ================================================================
+
+
+# ================================================================
+#  Organization
+# ================================================================
+
+ex:org/national-energy-registry
+    a            oeso:Organization ;
+    rdfs:label   "National Energy Registry" .
+
+
+# ================================================================
+#  Dataset and Distribution
+# ================================================================
+
+ex:dataset/energy-registry
+    a            dcat:Dataset ;
+    rdfs:label   "National Energy Registry — Generating Facilities" .
+
+ex:distribution/energy-registry-20260101
+    a                      dcat:Distribution ;
+    rdfs:label             "Energy Registry snapshot 2026-01-01" ;
+    dcat:isDistributionOf  ex:dataset/energy-registry .
+
+
+# ================================================================
+#  Entity
+# ================================================================
+
+ex:entity/plant-001
+    a          oeso:Entity ;
+    rdfs:label "Homer Valley Generating Station" .
+
+
+# ================================================================
+#  GeospatialState
+#  A single State from the energy registry carrying both facility
+#  attributes and geometry. geo:hasGeometry and mandatory CRS are
+#  enforced by the ogfo:GeospatialState restriction.
+# ================================================================
+
+ex:state/plant-001-20260101
+    a                             ogfo:GeospatialState ;
+    oeso:hasSource                ex:distribution/energy-registry-20260101 ;
+    oeso:hasStateDate             "2026-01-01T00:00:00Z"^^xsd:dateTime ;
+    oeso:hasStateCreationDate     "2026-03-15T00:00:00Z"^^xsd:dateTime ;
+    oeso:canonicalIdentifier      "NER-FACILITY-00421" ;
+    geo:hasGeometry               ex:geometry/plant-001 ;
+    ogfo:coordinateReferenceSystem <http://www.opengis.net/def/crs/EPSG/0/4326> ;
+    ogfo:precision                "50"^^xsd:decimal ;
+    ogfo:geometrySource           "address geocoding" ;
+    ex:facilityName               "Homer Valley Generating Station" ;
+    ex:capacityMW                 "1884"^^xsd:decimal ;
+    ex:fuelType                   "Natural Gas" ;
+    ex:operationalStatus          "Active" .
+
+
+# ================================================================
+#  Geometry
+#  Uses geo:Geometry and geo:asWKT from GeoSPARQL directly.
+#  ogfo:geometryType classifies the geometry representation.
+# ================================================================
+
+ex:geometry/plant-001
+    a                  geo:Geometry ;
+    geo:asWKT          "POINT(-79.9764 40.4406)"^^geo:wktLiteral ;
+    ogfo:geometryType  ogfo:Point .
+
+
+# ================================================================
+#  Acquisition Activity
+# ================================================================
+
+ex:activity/acquire-energy-registry-20260101
+    a                  oeso:AcquisitionActivity ;
+    prov:startedAtTime "2026-03-15T00:00:00Z"^^xsd:dateTime ;
+    prov:generated     ex:state/plant-001-20260101 .
+
+
+# ================================================================
+#  Entity Assignment
+# ================================================================
+
+ex:activity/assign-plant-001
+    a                  oeso:EntityAssignmentActivity ;
+    prov:startedAtTime "2026-03-15T00:01:00Z"^^xsd:dateTime ;
+    prov:generated     ex:assignment/plant-001 .
+
+ex:assignment/plant-001
+    a                    oeso:EntityAssignment ;
+    oeso:assignsState    ex:state/plant-001-20260101 ;
+    oeso:assignsToEntity ex:entity/plant-001 .
+
+
+# ================================================================
+#  Updated GeospatialState — geometry correction
+#  Six months later the facility's coordinates are corrected via
+#  survey. A new GeospatialState is created. The prior State is
+#  retained permanently — historical queries return the original
+#  geocoded coordinates for the Jan 2026 time window.
+# ================================================================
+
+ex:state/plant-001-20260901
+    a                             ogfo:GeospatialState ;
+    oeso:hasSource                ex:distribution/energy-registry-20260901 ;
+    oeso:hasStateDate             "2026-09-01T00:00:00Z"^^xsd:dateTime ;
+    oeso:hasStateCreationDate     "2026-09-01T10:00:00Z"^^xsd:dateTime ;
+    oeso:canonicalIdentifier      "NER-FACILITY-00421" ;
+    geo:hasGeometry               ex:geometry/plant-001-corrected ;
+    ogfo:coordinateReferenceSystem <http://www.opengis.net/def/crs/EPSG/0/4326> ;
+    ogfo:precision                "2"^^xsd:decimal ;
+    ogfo:geometrySource           "survey" ;
+    ex:facilityName               "Homer Valley Generating Station" ;
+    ex:capacityMW                 "1884"^^xsd:decimal ;
+    ex:fuelType                   "Natural Gas" ;
+    ex:operationalStatus          "Active" .
+
+ex:geometry/plant-001-corrected
+    a                  geo:Geometry ;
+    geo:asWKT          "POINT(-79.9771 40.4412)"^^geo:wktLiteral ;
+    ogfo:geometryType  ogfo:Point .
+
+ex:activity/acquire-energy-registry-20260901
+    a                  oeso:AcquisitionActivity ;
+    prov:startedAtTime "2026-09-01T10:00:00Z"^^xsd:dateTime ;
+    prov:generated     ex:state/plant-001-20260901 .
+
+ex:activity/assign-plant-001-corrected
+    a                  oeso:EntityAssignmentActivity ;
+    prov:startedAtTime "2026-09-01T10:01:00Z"^^xsd:dateTime ;
+    prov:generated     ex:assignment/plant-001-corrected .
+
+ex:assignment/plant-001-corrected
+    a                    oeso:EntityAssignment ;
+    oeso:assignsState    ex:state/plant-001-20260901 ;
+    oeso:assignsToEntity ex:entity/plant-001 .

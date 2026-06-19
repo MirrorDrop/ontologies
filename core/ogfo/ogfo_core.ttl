@@ -1,0 +1,159 @@
+@prefix ogfo: <https://mirrordrop.org/ontologies/core/ogfo#> .
+@prefix oeso: <https://mirrordrop.org/ontologies/core/oeso#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix geo:  <http://www.opengis.net/ont/geosparql#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ================================================================
+#  Ontology Header
+# ================================================================
+
+<https://mirrordrop.org/ontologies/core/ogfo>
+    a               owl:Ontology ;
+    owl:imports     <https://mirrordrop.org/ontologies/oeso/core> ;
+    rdfs:label      "Open Geospatial Feature Ontology (OGFO)" ;
+    rdfs:comment    """Second layer of the O'stack. Extends OESO with geospatial
+machinery — geometry States, coordinate reference systems, and spatial
+feature typing. Domain ontologies that require spatial description import
+OGFO rather than OESO directly. Mirrors without a spatial component import
+OESO directly and never touch OGFO.""" ;
+    owl:versionIRI  <https://mirrordrop.org/ontologies/core/ogfo/2026-06-14> ;
+    owl:versionInfo "0.1.0" ;
+    dct:creator     "Joseph A. Stoffa" ;
+    dct:license     <https://creativecommons.org/licenses/by/4.0/> ;
+    dct:rights      "Released as open source under CC BY 4.0" ;
+    skos:changeNote "v0.1.0 — Initial release." .
+
+
+# ================================================================
+#  Core Classes
+# ================================================================
+
+ogfo:SpatialFeature
+    a            owl:Class ;
+    rdfs:subClassOf oeso:Entity ;
+    rdfs:label   "Spatial Feature" ;
+    rdfs:comment "An Entity that has a meaningful location in the real world. Subclass to introduce typed spatial features — facilities, boundaries, networks, routes." .
+
+ogfo:GeospatialState
+    a            owl:Class ;
+    rdfs:subClassOf oeso:State ;
+    rdfs:label   "Geospatial State" ;
+    rdfs:comment """A State that carries a geometry description of an Entity at a
+point in time. Geometry is temporally bounded like any other State — when
+coordinates change a new GeospatialState is created; the prior one is
+retained permanently. Coordinate reference system is mandatory.""" ;
+    rdfs:subClassOf
+        [ a owl:Restriction ;
+          owl:onProperty  ogfo:hasGeometry ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
+        [ a owl:Restriction ;
+          owl:onProperty  ogfo:coordinateReferenceSystem ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+
+ogfo:Geometry
+    a            owl:Class ;
+    rdfs:label   "Geometry" ;
+    rdfs:comment "A geometric representation of a spatial feature in a declared coordinate reference system. Carries the WKT literal and geometry type." ;
+    rdfs:subClassOf
+        [ a owl:Restriction ;
+          owl:onProperty  ogfo:asWKT ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
+        [ a owl:Restriction ;
+          owl:onProperty  ogfo:geometryType ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+
+
+# ================================================================
+#  Geometry Types
+# ================================================================
+
+ogfo:GeometryType
+    a            owl:Class ;
+    rdfs:label   "Geometry Type" ;
+    rdfs:comment "Named individual classifying the geometry — point, linestring, polygon, multipoint, multilinestring, multipolygon." .
+
+ogfo:Point            a ogfo:GeometryType ; rdfs:label "Point" .
+ogfo:LineString       a ogfo:GeometryType ; rdfs:label "LineString" .
+ogfo:Polygon          a ogfo:GeometryType ; rdfs:label "Polygon" .
+ogfo:MultiPoint       a ogfo:GeometryType ; rdfs:label "MultiPoint" .
+ogfo:MultiLineString  a ogfo:GeometryType ; rdfs:label "MultiLineString" .
+ogfo:MultiPolygon     a ogfo:GeometryType ; rdfs:label "MultiPolygon" .
+
+
+# ================================================================
+#  Object Properties
+# ================================================================
+
+ogfo:hasGeometry
+    a            owl:ObjectProperty ;
+    rdfs:label   "has geometry" ;
+    rdfs:comment "Links a GeospatialState to its Geometry instance." ;
+    rdfs:domain  ogfo:GeospatialState ;
+    rdfs:range   ogfo:Geometry .
+
+ogfo:hasLocation
+    a            owl:ObjectProperty ;
+    rdfs:label   "has location" ;
+    rdfs:comment """Links any oeso:Entity to a GeospatialState describing its
+location. Not restricted to ogfo:SpatialFeature — any entity may carry a
+location State if meaningful. Resolves temporally via BEES like any other
+State.""" ;
+    rdfs:domain  oeso:Entity ;
+    rdfs:range   ogfo:GeospatialState .
+
+ogfo:geometryType
+    a            owl:ObjectProperty ;
+    rdfs:label   "geometry type" ;
+    rdfs:comment "Classifies the geometry as point, linestring, polygon etc." ;
+    rdfs:domain  ogfo:Geometry ;
+    rdfs:range   ogfo:GeometryType .
+
+
+# ================================================================
+#  Datatype Properties
+# ================================================================
+
+ogfo:asWKT
+    a            owl:DatatypeProperty ;
+    rdfs:label   "as WKT" ;
+    rdfs:comment "Well-Known Text representation of the geometry. The primary serialization format for OGFO geometries." ;
+    rdfs:domain  ogfo:Geometry ;
+    rdfs:range   geo:wktLiteral .
+
+ogfo:coordinateReferenceSystem
+    a            owl:DatatypeProperty ;
+    rdfs:label   "coordinate reference system" ;
+    rdfs:comment """EPSG code or OGC CRS URI identifying the coordinate reference
+system. Mandatory on every GeospatialState — a geometry without a declared
+CRS is analytically dangerous. Standard default is EPSG:4326 (WGS84).""" ;
+    rdfs:domain  ogfo:GeospatialState ;
+    rdfs:range   xsd:anyURI .
+
+ogfo:precision
+    a            owl:DatatypeProperty ;
+    rdfs:label   "precision" ;
+    rdfs:comment "Optional. Precision of the geometry in metres. Useful for distinguishing survey-grade from GPS-grade from address-geocoded locations." ;
+    rdfs:domain  ogfo:GeospatialState ;
+    rdfs:range   xsd:decimal .
+
+ogfo:geometrySource
+    a            owl:DatatypeProperty ;
+    rdfs:label   "geometry source method" ;
+    rdfs:comment "Optional. How the geometry was obtained — survey, GPS, address geocoding, digitized, modeled etc." ;
+    rdfs:domain  ogfo:GeospatialState ;
+    rdfs:range   xsd:string .
+
+
+# ================================================================
+#  Disjointness
+# ================================================================
+
+[ a           owl:AllDisjointClasses ;
+  owl:members ( ogfo:Point ogfo:LineString ogfo:Polygon
+                ogfo:MultiPoint ogfo:MultiLineString ogfo:MultiPolygon ) ] .
