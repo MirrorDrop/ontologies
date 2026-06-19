@@ -48,8 +48,11 @@ Extends OGFO. Models administrative boundaries as first-class entities rather th
 ### Infrastructure
 
 **OICO — Open Infrastructure Core Ontology** — planned
+
 **OEPO — Open Electrical Power Ontology** — planned
+
 **OWIO — Open Water Infrastructure Ontology** — planned
+
 **OMIO — Open Maritime Infrastructure Ontology** — planned
 
 ## Platform
