@@ -31,10 +31,10 @@ import chain must be loaded explicitly._
 ## Core
 
 **OESO — Open Entity State Ontology**
-The foundational layer. Provides the bitemporal State model, the provenance chain (Organization → Dataset → Distribution → State → Entity), Assessment-based source quality tracking, and the full resolution activity hierarchy (EntityAssignment, EntityEquivalence, AttributeMapping). Domain-agnostic — no assumptions about what kind of entity is being described. [`oeso/`](oeso/)
+The foundational layer. Provides the bitemporal State model, the provenance chain (Organization → Dataset → Distribution → State → Entity), Assessment-based source quality tracking, and the full resolution activity hierarchy (EntityAssignment, EntityEquivalence, AttributeMapping). Domain-agnostic — no assumptions about what kind of entity is being described. [`core/oeso/`](oeso/)
 
 **OGFO — Open Geospatial Feature Ontology**
-Extends OESO with geospatial machinery. Introduces `GeospatialState` — a State subclass that requires a geometry and a coordinate reference system. Geometry is a State, not a property: when coordinates change, a new GeospatialState is created and the old one is retained permanently. All domain ontologies that require spatial description import OGFO rather than OESO directly. [`ogfo/`](ogfo/)
+Extends OESO with geospatial machinery. Introduces `GeospatialState` — a State subclass that requires a geometry and a coordinate reference system. Geometry is a State, not a property: when coordinates change, a new GeospatialState is created and the old one is retained permanently. All domain ontologies that require spatial description import OGFO rather than OESO directly. [`core/ogfo/`](ogfo/)
 
 ## Domain extensions
 
