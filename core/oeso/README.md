@@ -109,7 +109,7 @@ The bitemporal properties, source linkage, and provenance machinery are inherite
 ## Namespace
 
 ```
-https://mirrordrop.org/ontologies/oeso/core#
+https://mirrordrop.org/ontologies/core/oeso#
 ```
 
 Prefix: `oeso:`

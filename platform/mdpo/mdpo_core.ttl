@@ -1,0 +1,144 @@
+@prefix mdpo: <https://mirrordrop.org/ontologies/platform/mdpo#> .
+@prefix oeso: <https://mirrordrop.org/ontologies/core/oeso#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ================================================================
+#  Ontology Header
+# ================================================================
+
+<https://mirrordrop.org/ontologies/platform/mdpo>
+    a               owl:Ontology ;
+    owl:imports     <https://mirrordrop.org/ontologies/core/oeso> ;
+    rdfs:label      "MirrorDrop Provenance Ontology (MDPO)" ;
+    rdfs:comment    """MDPO extends OESO with platform-specific provenance properties
+for the MirrorDrop/lil'drop acquisition pipeline. OESO deliberately omits
+concrete acquisition details as platform concerns — MDPO defines them.
+
+MDPO covers:
+  - Acquisition activity metadata (source URL, ingestor identity)
+  - Artifact metadata (hash, path, extension)
+  - Mirror-specific artifact typing as oeso:Source subclasses
+
+MDPO does not define Assessment logic — that belongs to mirror-specific
+vocabularies that extend oeso:Assessment for their domain.
+
+Part of the 'drop ecosystem (MirrorDrop, lil'drop, proto-drop).
+OESO is available independently at https://mirrordrop.org/ontologies/core/oeso
+for any entity-centric state knowledge graph.""" ;
+    owl:versionIRI  <https://mirrordrop.org/ontologies/platform/mdpo/2026-06-06> ;
+    owl:versionInfo "0.1.0" ;
+    dct:creator     "Joseph A. Stoffa" ;
+    dct:license     <https://creativecommons.org/licenses/by/4.0/> ;
+    dct:rights      "Released as open source under CC BY 4.0" .
+
+
+# ================================================================
+#  Acquisition Activity Subclass
+# ================================================================
+
+mdpo:MirrorAcquisitionActivity
+    a               owl:Class ;
+    rdfs:subClassOf oeso:AcquisitionActivity ;
+    rdfs:label      "Mirror Acquisition Activity" ;
+    rdfs:comment    """An AcquisitionActivity executed by a lil'drop/MirrorDrop ingestor.
+Carries ingestor identity and source URL as first-class provenance properties.
+Linked to the AcquiredArtifact it produces via mdpo:producedArtifact.""" .
+
+
+# ================================================================
+#  Artifact Class
+# ================================================================
+
+mdpo:AcquiredArtifact
+    a               owl:Class ;
+    rdfs:subClassOf oeso:Source ;
+    rdfs:label      "Acquired Artifact" ;
+    rdfs:comment    """An oeso:Source representing a raw artifact acquired by a
+MirrorAcquisitionActivity. Preserved exactly as received. The artifact hash
+is the primary reproducibility anchor.
+
+Subclasses oeso:Source directly so that SPARQL queries over oeso:Source
+naturally include acquired artifacts alongside dcat:Dataset and
+dcat:Distribution — enabling queries like 'show all sources for this entity'
+without needing to know the specific artifact type.""" .
+
+
+# ================================================================
+#  Object Properties
+# ================================================================
+
+mdpo:producedArtifact
+    a                  owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:generated ;
+    rdfs:label         "produced artifact" ;
+    rdfs:comment       "Links a MirrorAcquisitionActivity to the AcquiredArtifact it produced." ;
+    rdfs:domain        mdpo:MirrorAcquisitionActivity ;
+    rdfs:range         mdpo:AcquiredArtifact .
+
+
+# ================================================================
+#  Datatype Properties — Activity
+# ================================================================
+
+mdpo:sourceURL
+    a            owl:DatatypeProperty ;
+    rdfs:label   "source URL" ;
+    rdfs:comment """The URL from which the artifact was fetched. Recorded for provenance.
+Note: URL stability is not guaranteed — the artifact hash is the reproducibility
+anchor, not the URL.""" ;
+    rdfs:domain  mdpo:MirrorAcquisitionActivity ;
+    rdfs:range   xsd:anyURI .
+
+mdpo:ingestorName
+    a            owl:DatatypeProperty ;
+    rdfs:label   "ingestor name" ;
+    rdfs:comment "The registered name of the lil'drop ingestor that executed this activity." ;
+    rdfs:domain  mdpo:MirrorAcquisitionActivity ;
+    rdfs:range   xsd:string .
+
+mdpo:ingestorVersion
+    a            owl:DatatypeProperty ;
+    rdfs:label   "ingestor version" ;
+    rdfs:comment "Semantic version of the ingestor. Combined with artifact hash guarantees reproducibility." ;
+    rdfs:domain  mdpo:MirrorAcquisitionActivity ;
+    rdfs:range   xsd:string .
+
+mdpo:activityType
+    a            owl:DatatypeProperty ;
+    rdfs:label   "activity type" ;
+    rdfs:comment "The acquisition method — file_download, api_fetch, or scraper_run." ;
+    rdfs:domain  mdpo:MirrorAcquisitionActivity ;
+    rdfs:range   xsd:string .
+
+
+# ================================================================
+#  Datatype Properties — Artifact
+# ================================================================
+
+mdpo:artifactHash
+    a            owl:DatatypeProperty ;
+    rdfs:label   "artifact hash" ;
+    rdfs:comment "SHA-256 hash of the acquired artifact. Primary reproducibility anchor." ;
+    rdfs:domain  mdpo:AcquiredArtifact ;
+    rdfs:range   xsd:string .
+
+mdpo:artifactPath
+    a            owl:DatatypeProperty ;
+    rdfs:label   "artifact path" ;
+    rdfs:comment "Local filesystem path where the artifact is stored." ;
+    rdfs:domain  mdpo:AcquiredArtifact ;
+    rdfs:range   xsd:string .
+
+mdpo:artifactExtension
+    a            owl:DatatypeProperty ;
+    rdfs:label   "artifact extension" ;
+    rdfs:comment "File extension of the artifact — json, pbf, csv, xml etc." ;
+    rdfs:domain  mdpo:AcquiredArtifact ;
+    rdfs:range   xsd:string .
