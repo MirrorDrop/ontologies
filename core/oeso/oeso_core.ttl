@@ -273,13 +273,6 @@ oeso:assessmentDate
     rdfs:domain  oeso:Assessment ;
     rdfs:range   xsd:dateTime .
 
-oeso:canonicalIdentifier
-    a            owl:DatatypeProperty ;
-    rdfs:label   "canonical identifier" ;
-    rdfs:comment "The source's own identifier for this record." ;
-    rdfs:domain  oeso:State ;
-    rdfs:range   xsd:string .
-
 oeso:equivalenceConfidence
     a            owl:DatatypeProperty ;
     rdfs:label   "equivalence confidence" ;

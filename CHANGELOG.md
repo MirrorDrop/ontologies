@@ -41,3 +41,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `oeso:assessmentDate` — timestamp on Assessment instances
 - DCAT mappings: `dcat:Dataset` and `dcat:Distribution` declared as subclasses of `oeso:Source`
 - Disjointness axioms across StateActivity and ResolutionActivity branches
+
+## [oeso-0.1.0] — 2026-07-06
+
+### Removed
+- `oeso:canonicalIdentifier` — removed from `oeso:State`. The property baked in an assumption that sources reliably provide unique identifiers, which is not guaranteed. Domain-specific identifier fields should be modeled as regular attributes under the source's attribute namespace. Entity resolution processors are responsible for determining which attributes serve as matching keys — that is mirror-specific logic, not a platform assumption.
