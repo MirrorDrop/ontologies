@@ -1,4 +1,5 @@
 @prefix oeso: <https://mirrordrop.org/ontologies/core/oeso#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
@@ -17,19 +18,37 @@
     rdfs:label      "Open Entity State Ontology (OESO)" ;
     rdfs:comment    """Domain-agnostic ontology for describing real-world entities through
 temporally bounded, immutable, sourced descriptions (States). Concrete source types,
-acquisition methods, and assessment criteria belong in extending vocabularies.""" ;
-    owl:versionIRI  <https://mirrordrop.org/ontologies/core/oeso/2026-07-29> ;
-    owl:versionInfo "0.2.0" ;
+acquisition methods, assessment criteria, and resolution methods belong in extending
+vocabularies.""" ;
+    owl:versionIRI  <https://mirrordrop.org/ontologies/core/oeso/2026-07-30> ;
+    owl:versionInfo "0.2.3" ;
     dct:creator     "Joseph A. Stoffa" ;
     dct:license     <https://creativecommons.org/licenses/by/4.0/> ;
     dct:rights      "Released as open source under CC BY 4.0" ;
     skos:changeNote "v0.1.0 — Initial public release." ;
     skos:changeNote """v0.2.0 — States are now produced by exactly one StateActivity via
-oeso:generatedBy (subproperty of prov:wasGeneratedBy), replacing the direct State→Source
-hasSource edge and its cardinality restriction. A State's sources are derived by
-traversing generatedBy → the activity's oeso:used inputs. Removed oeso:hasSource. Added
-oeso:generatedBy and oeso:used. BREAKING: queries and writers keying on hasSource must
-migrate to the generatedBy/used traversal.""" .
+oeso:generatedBy (subproperty of oeso:generatedByActivity and prov:wasGeneratedBy),
+replacing the direct State→Source hasSource edge and its cardinality restriction. A
+State's sources are derived by traversing generatedBy → the activity's oeso:used inputs.
+Removed oeso:hasSource. Added a common activity/provenance model for States, Assessments,
+and resolution assertions; introduced source-defined Attributes and their Source
+relationship; clarified bitemporal State properties; and replaced global DCAT subclass
+mappings with OESO-specific source classes. BREAKING: queries and writers keying on
+hasSource must migrate to the generatedBy/used traversal.""" ;
+    skos:changeNote """v0.2.1 — Simplified the core State activity model by removing
+AcquisitionActivity and DerivationActivity. StateActivity is now the sole core class for
+activities that generate States; extending vocabularies may classify State activities by
+workflow, method, or input type. Added IngestActivity for activities that acquire or
+capture external information and generate Artifacts, and added Artifact as a general
+preserved Source type.""" ;
+
+    skos:changeNote """v0.2.2 — Removed application-specific optional metadata from OESO core: activityAsOfTime, artifactHash, assessmentDate, and equivalenceConfidence. OESO retains the structural Assessment and resolution models, while scoring systems, assessment result vocabularies, execution cutoffs, hashes, and storage/reproducibility metadata belong in extending ontologies such as MDPO or domain-specific vocabularies.""" ;
+    skos:changeNote """v0.2.3 — Simplified generation provenance by removing the specialized
+properties generatedBy, assessedBy, assignmentGeneratedBy, equivalenceGeneratedBy, and
+mappingGeneratedBy. All generated OESO provenance entities now use the single
+oeso:generatedByActivity relationship, with class-level restrictions constraining the
+appropriate Activity subtype. BREAKING: data and queries using the removed specialized
+properties must migrate to oeso:generatedByActivity.""" .
 
 # ================================================================
 #  Core Classes
@@ -41,27 +60,58 @@ oeso:Entity
     rdfs:comment "A real-world thing described by States. Subclass to introduce typed domain entities." .
 
 oeso:State
-    a            owl:Class ;
-    rdfs:label   "State" ;
-    rdfs:comment """Immutable, temporally bounded description of an Entity, produced by
-exactly one StateActivity. Bitemporal: hasStateDate (valid-from), hasStateValidTo
-(valid-to, open if absent), hasStateCreationDate (transaction time, never modified).
-The State's source(s) are derived by traversing generatedBy → the activity's used inputs.
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "State" ;
+    rdfs:comment    """Immutable, temporally bounded description of an Entity, produced by
+exactly one StateActivity. Bitemporal: hasStateDate begins the real-world interval the
+State is understood to represent the Entity; hasStateValidTo ends that interval and is
+open if absent; hasStateCreationDate records transaction time and is never modified.
+The State's source(s) are derived by traversing generatedByActivity → the activity's used inputs.
 Corrections create new States; prior States are retained permanently.""" ;
     rdfs:subClassOf
-        [ a owl:Restriction ; owl:onProperty oeso:generatedBy ;
+        [ a owl:Restriction ;
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:StateActivity ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:hasStateDate ;
           owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
-        [ a owl:Restriction ; owl:onProperty oeso:hasStateDate ;
-          owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
-        [ a owl:Restriction ; owl:onProperty oeso:hasStateCreationDate ;
+        [ a owl:Restriction ;
+          owl:onProperty oeso:hasStateValidTo ;
+          owl:maxCardinality "1"^^xsd:nonNegativeInteger ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:hasStateCreationDate ;
           owl:cardinality "1"^^xsd:nonNegativeInteger ] .
-
 
 oeso:Source
     a               owl:Class ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label      "Source" ;
-    rdfs:comment    "Provenance entity from which a State is derived. Abstract — subclass to introduce typed sources. Carries Assessments via oeso:hasAssessment." .
+    rdfs:comment    "Provenance entity from which a State or other generated assertion is derived. Abstract — subclass to introduce typed sources." .
+
+oeso:Artifact
+    a               owl:Class ;
+    rdfs:subClassOf oeso:Source ;
+    rdfs:label      "Artifact" ;
+    rdfs:comment    "A preserved information-bearing Source generated by exactly one IngestActivity and available for later use as provenance evidence or processing input." ;
+    rdfs:subClassOf
+        [ a owl:Restriction ;
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:IngestActivity ] .
+
+oeso:DatasetSource
+    a               owl:Class ;
+    rdfs:subClassOf oeso:Source, dcat:Dataset ;
+    rdfs:label      "Dataset Source" ;
+    rdfs:comment    "A DCAT Dataset used as an OESO Source." .
+
+oeso:DistributionSource
+    a               owl:Class ;
+    rdfs:subClassOf oeso:Source, dcat:Distribution ;
+    rdfs:label      "Distribution Source" ;
+    rdfs:comment    "A DCAT Distribution used as an OESO Source." .
 
 oeso:Organization
     a               owl:Class ;
@@ -69,87 +119,121 @@ oeso:Organization
     rdfs:label      "Organization" ;
     rdfs:comment    "A formal group responsible for publishing Sources." .
 
-oeso:Assessment
-    a            owl:Class ;
-    rdfs:label   "Assessment" ;
-    rdfs:comment "Immutable record evaluating the quality of States derived from a Source. Produced by an AssessmentActivity. Subclass to define specific assessment types." .
-
-oeso:EntityAssignment
-    a            owl:Class ;
-    rdfs:label   "Entity Assignment" ;
-    rdfs:comment "Reified assertion that a State describes a particular Entity. Produced by an EntityAssignmentActivity." ;
+oeso:Attribute
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "Source Attribute" ;
+    rdfs:comment    """An identifier for a field, column, key, property, or other named
+attribute defined by a Source. Attribute identifiers are conventionally minted as
+<source-uri>/attribute/<attribute-name>. They identify source-native attributes and are
+not necessarily RDF properties.""" ;
     rdfs:subClassOf
         [ a owl:Restriction ;
-          owl:onProperty  oeso:assignsState ;
+          owl:onProperty oeso:attributeOf ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+
+oeso:Assessment
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "Assessment" ;
+    rdfs:comment    "Immutable record evaluating a Source, State, Attribute, or other provenance entity. Produced by exactly one AssessmentActivity. Subclass to define specific assessment types." ;
+    rdfs:subClassOf
+        [ a owl:Restriction ;
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:AssessmentActivity ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:assesses ;
+          owl:minCardinality "1"^^xsd:nonNegativeInteger ] .
+
+oeso:EntityAssignment
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "Entity Assignment" ;
+    rdfs:comment    "Reified assertion that a State describes a particular Entity. Produced by exactly one EntityAssignmentActivity." ;
+    rdfs:subClassOf
+        [ a owl:Restriction ;
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:EntityAssignmentActivity ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:assignsState ;
           owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
         [ a owl:Restriction ;
-          owl:onProperty  oeso:assignsToEntity ;
+          owl:onProperty oeso:assignsToEntity ;
           owl:cardinality "1"^^xsd:nonNegativeInteger ] .
 
 oeso:EntityEquivalence
-    a            owl:Class ;
-    rdfs:label   "Entity Equivalence" ;
-    rdfs:comment "Reified assertion that two or more Entity UUIDs refer to the same real-world thing. Produced by an EntityEquivalenceActivity. Minimum two entities required." ;
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "Entity Equivalence" ;
+    rdfs:comment    "Reified assertion that two or more Entity UUIDs refer to the same real-world thing. Produced by exactly one EntityEquivalenceActivity. Minimum two entities required." ;
     rdfs:subClassOf
         [ a owl:Restriction ;
-          owl:onProperty     oeso:hasEntity ;
-          owl:minCardinality "2"^^xsd:nonNegativeInteger ] .
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:EntityEquivalenceActivity ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:hasEntity ;
+          owl:minCardinality "2"^^xsd:nonNegativeInteger ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:canonicalEntity ;
+          owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
 
 oeso:AttributeMapping
-    a            owl:Class ;
-    rdfs:label   "Attribute Mapping" ;
-    rdfs:comment "Reified assertion that two or more attributes from different Sources represent the same real-world concept. Produced by an AttributeMappingActivity. Minimum two attributes required." ;
+    a               owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label      "Attribute Mapping" ;
+    rdfs:comment    "Reified assertion that two or more source-defined Attributes represent the same real-world concept. Produced by exactly one AttributeMappingActivity. Minimum two attributes required." ;
     rdfs:subClassOf
         [ a owl:Restriction ;
-          owl:onProperty     oeso:mapsAttribute ;
+          owl:onProperty oeso:generatedByActivity ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass oeso:AttributeMappingActivity ] ,
+        [ a owl:Restriction ;
+          owl:onProperty oeso:mapsAttribute ;
           owl:minCardinality "2"^^xsd:nonNegativeInteger ] .
-
 
 # ================================================================
 #  Activity Classes
 # ================================================================
 
-oeso:StateActivity
+oeso:Activity
     a               owl:Class ;
     rdfs:subClassOf prov:Activity ;
-    rdfs:label      "State Activity" ;
-    rdfs:comment    "Produces a State. Two branches: AcquisitionActivity (external data) and DerivationActivity (from existing States)." ;
+    rdfs:label      "OESO Activity" ;
+    rdfs:comment    "Abstract parent for activities that generate immutable OESO provenance entities." ;
     rdfs:subClassOf
         [ a owl:Restriction ;
-          owl:onProperty  prov:startedAtTime ;
-          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+          owl:onProperty prov:startedAtTime ;
+          owl:cardinality "1"^^xsd:nonNegativeInteger ] ,
+        [ a owl:Restriction ;
+          owl:onProperty prov:endedAtTime ;
+          owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
 
-oeso:AcquisitionActivity
+oeso:IngestActivity
     a               owl:Class ;
-    rdfs:subClassOf oeso:StateActivity ;
-    rdfs:label      "Acquisition Activity" ;
-    rdfs:comment    "Produces a State from raw external data. Subclass to type specific capture methods." .
+    rdfs:subClassOf oeso:Activity ;
+    rdfs:label      "Ingest Activity" ;
+    rdfs:comment    "An activity that retrieves, receives, captures, or otherwise acquires external information and generates one or more Artifacts. Concrete ingestion methods and platform execution details belong in extending vocabularies." .
 
-oeso:DerivationActivity
+oeso:StateActivity
     a               owl:Class ;
-    rdfs:subClassOf oeso:StateActivity ;
-    rdfs:label      "Derivation Activity" ;
-    rdfs:comment    "Produces a new State by consuming one or more existing States as inputs." .
+    rdfs:subClassOf oeso:Activity ;
+    rdfs:label      "State Activity" ;
+    rdfs:comment    "An activity that generates one or more immutable States. OESO does not distinguish State activities by workflow, method, implementation role, or input type; extending vocabularies may introduce those classifications." .
 
 oeso:AssessmentActivity
     a               owl:Class ;
-    rdfs:subClassOf prov:Activity ;
+    rdfs:subClassOf oeso:Activity ;
     rdfs:label      "Assessment Activity" ;
-    rdfs:comment    "Produces an Assessment for a Source. Peer of StateActivity — it does not produce a State." ;
-    rdfs:subClassOf
-        [ a owl:Restriction ;
-          owl:onProperty  prov:startedAtTime ;
-          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+    rdfs:comment    "Produces an Assessment. Peer of StateActivity — it does not produce a State." .
 
 oeso:ResolutionActivity
     a               owl:Class ;
-    rdfs:subClassOf prov:Activity ;
+    rdfs:subClassOf oeso:Activity ;
     rdfs:label      "Resolution Activity" ;
-    rdfs:comment    "Abstract parent for activities that resolve relationships between entities, states, and attributes. Does not produce a State." ;
-    rdfs:subClassOf
-        [ a owl:Restriction ;
-          owl:onProperty  prov:startedAtTime ;
-          owl:cardinality "1"^^xsd:nonNegativeInteger ] .
+    rdfs:comment    "Abstract parent for activities that resolve relationships between entities, states, and attributes. Does not produce a State." .
 
 oeso:EntityAssignmentActivity
     a               owl:Class ;
@@ -167,37 +251,49 @@ oeso:AttributeMappingActivity
     a               owl:Class ;
     rdfs:subClassOf oeso:ResolutionActivity ;
     rdfs:label      "Attribute Mapping Activity" ;
-    rdfs:comment    "Produces an AttributeMapping asserting that two or more attributes from different Sources represent the same real-world concept." .
-
-
-# ================================================================
-#  DCAT Mappings
-# ================================================================
-
-dcat:Dataset      rdfs:subClassOf oeso:Source .
-dcat:Distribution rdfs:subClassOf oeso:Source .
-
+    rdfs:comment    "Produces an AttributeMapping asserting that two or more source-defined Attributes represent the same real-world concept." .
 
 # ================================================================
 #  Object Properties
 # ================================================================
 
-oeso:generatedBy
+oeso:generatedByActivity
     a                  owl:ObjectProperty ;
     rdfs:subPropertyOf prov:wasGeneratedBy ;
-    rdfs:label         "generated by" ;
-    rdfs:comment       "The one StateActivity that produced this State. Authoritative origin. A State's sources are derived by traversing this activity's oeso:used inputs — there is no direct State→Source edge." ;
-    rdfs:domain        oeso:State ;
-    rdfs:range         oeso:StateActivity .
-
+    rdfs:label         "generated by activity" ;
+    rdfs:comment       "Generic relationship from an immutable OESO provenance entity to the OESO Activity that generated it." ;
+    rdfs:domain        prov:Entity ;
+    rdfs:range         oeso:Activity .
 
 oeso:used
     a                  owl:ObjectProperty ;
     rdfs:subPropertyOf prov:used ;
     rdfs:label         "used" ;
-    rdfs:comment       "An input consumed by a StateActivity: an artifact/Distribution for AcquisitionActivity, or input States/Distributions for DerivationActivity. Multiple permitted. Together with the activity's recorded parameters and its startedAtTime as-of cut, fully determines the activity's output." ;
-    rdfs:domain        oeso:StateActivity .
+    rdfs:comment       "An input consumed by an OESO Activity, including artifacts, Distributions, Sources, States, Attributes, prior assertions, rules, model artifacts, or other evidence. Multiple permitted." ;
+    rdfs:domain        oeso:Activity ;
+    rdfs:range         prov:Entity .
 
+oeso:assesses
+    a            owl:ObjectProperty ;
+    rdfs:label   "assesses" ;
+    rdfs:comment "Links an Assessment to the Source, State, Attribute, or other provenance entity it evaluates." ;
+    rdfs:domain  oeso:Assessment ;
+    rdfs:range   prov:Entity .
+
+oeso:hasAssessment
+    a             owl:ObjectProperty ;
+    owl:inverseOf oeso:assesses ;
+    rdfs:label    "has assessment" ;
+    rdfs:comment  "Links a provenance entity to an Assessment that evaluates it." ;
+    rdfs:domain   prov:Entity ;
+    rdfs:range    oeso:Assessment .
+
+oeso:attributeOf
+    a            owl:ObjectProperty ;
+    rdfs:label   "attribute of" ;
+    rdfs:comment "Links a source-defined Attribute to the Source that defines it. This semantic relationship is explicit even when it is also encoded in the Attribute URI." ;
+    rdfs:domain  oeso:Attribute ;
+    rdfs:range   oeso:Source .
 
 oeso:assignsState
     a            owl:ObjectProperty ;
@@ -218,90 +314,62 @@ oeso:hasEntity
     rdfs:domain  oeso:EntityEquivalence ;
     rdfs:range   oeso:Entity .
 
+oeso:canonicalEntity
+    a            owl:ObjectProperty ;
+    rdfs:label   "canonical entity" ;
+    rdfs:comment "Links an EntityEquivalence to the canonical Entity UUID designated to represent the equivalence cluster. At most one per EntityEquivalence." ;
+    rdfs:domain  oeso:EntityEquivalence ;
+    rdfs:range   oeso:Entity .
+
 oeso:mapsAttribute
     a            owl:ObjectProperty ;
     rdfs:label   "maps attribute" ;
-    rdfs:comment "Links an AttributeMapping to one of the attributes in the mapping. Minimum two per AttributeMapping." ;
-    rdfs:domain  oeso:AttributeMapping .
+    rdfs:comment "Links an AttributeMapping to one of the source-defined Attributes participating in the mapping. Minimum two per AttributeMapping." ;
+    rdfs:domain  oeso:AttributeMapping ;
+    rdfs:range   oeso:Attribute .
 
 oeso:attributeMappingScope
     a            owl:ObjectProperty ;
     rdfs:label   "attribute mapping scope" ;
-    rdfs:comment "Optionally scopes an AttributeMapping to specific Sources where the mapping applies." ;
+    rdfs:comment "Optionally scopes an AttributeMapping to specific Sources or source versions where the mapping applies." ;
     rdfs:domain  oeso:AttributeMapping ;
     rdfs:range   oeso:Source .
-
-oeso:sameRealWorldEntity
-    a            owl:ObjectProperty ;
-    rdfs:label   "same real-world entity" ;
-    rdfs:comment "Links an EntityEquivalence to the canonical Entity UUID the cluster resolves to, if one has been designated." ;
-    rdfs:domain  oeso:EntityEquivalence ;
-    rdfs:range   oeso:Entity .
-
-oeso:hasAssessment
-    a            owl:ObjectProperty ;
-    rdfs:label   "has assessment" ;
-    rdfs:comment "Links a Source to an Assessment of the States derived from it." ;
-    rdfs:domain  oeso:Source ;
-    rdfs:range   oeso:Assessment .
-
-oeso:assessedBy
-    a                  owl:ObjectProperty ;
-    rdfs:subPropertyOf prov:wasGeneratedBy ;
-    rdfs:label         "assessed by" ;
-    rdfs:domain        oeso:Assessment ;
-    rdfs:range         prov:Activity .
-
 
 # ================================================================
 #  Datatype Properties
 # ================================================================
 
 oeso:hasStateDate
-    a          owl:DatatypeProperty ;
-    rdfs:label "valid-from date" ;
-    rdfs:range xsd:dateTime .
+    a            owl:DatatypeProperty ;
+    rdfs:label   "valid-from datetime" ;
+    rdfs:comment """The beginning of the interval in real-world time during which the
+State is understood to represent the Entity. This is valid time, not the time the State
+was created, ingested, or stored.""" ;
+    rdfs:domain  oeso:State ;
+    rdfs:range   xsd:dateTime .
 
 oeso:hasStateValidTo
     a            owl:DatatypeProperty ;
-    rdfs:label   "valid-to date" ;
-    rdfs:comment "Omit to indicate open / still current." ;
+    rdfs:label   "valid-to datetime" ;
+    rdfs:comment "The end of the interval in real-world time during which the State is understood to represent the Entity. Omit to indicate an open interval or a State still understood to be current." ;
+    rdfs:domain  oeso:State ;
     rdfs:range   xsd:dateTime .
 
 oeso:hasStateCreationDate
     a            owl:DatatypeProperty ;
-    rdfs:label   "transaction time" ;
-    rdfs:comment "Set at write time; never modified." ;
+    rdfs:label   "transaction datetime" ;
+    rdfs:comment "The datetime the immutable State was first written to the Entity State Store. Set once and never modified." ;
+    rdfs:domain  oeso:State ;
     rdfs:range   xsd:dateTime .
-
-oeso:artifactHash
-    a            owl:DatatypeProperty ;
-    rdfs:label   "artifact hash" ;
-    rdfs:comment "Content hash of the source artifact. Primary reproducibility anchor." ;
-    rdfs:domain  oeso:Source ;
-    rdfs:range   xsd:string .
-
-oeso:assessmentDate
-    a            owl:DatatypeProperty ;
-    rdfs:label   "assessment date" ;
-    rdfs:domain  oeso:Assessment ;
-    rdfs:range   xsd:dateTime .
-
-oeso:equivalenceConfidence
-    a            owl:DatatypeProperty ;
-    rdfs:label   "equivalence confidence" ;
-    rdfs:comment "Confidence score (0.0–1.0) for an EntityEquivalence assertion. Low scores flag candidates for human review." ;
-    rdfs:domain  oeso:EntityEquivalence ;
-    rdfs:range   xsd:decimal .
-
 
 # ================================================================
 #  Disjointness
 # ================================================================
 
 [ a           owl:AllDisjointClasses ;
-  owl:members ( oeso:AcquisitionActivity oeso:DerivationActivity ) ] .
+  owl:members ( oeso:IngestActivity oeso:StateActivity
+                oeso:ResolutionActivity oeso:AssessmentActivity ) ] .
 
 [ a           owl:AllDisjointClasses ;
-  owl:members ( oeso:StateActivity oeso:ResolutionActivity
-                oeso:AssessmentActivity ) ] .
+  owl:members ( oeso:EntityAssignmentActivity oeso:EntityEquivalenceActivity
+                oeso:AttributeMappingActivity ) ] .
