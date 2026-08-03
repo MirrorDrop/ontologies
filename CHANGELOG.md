@@ -5,6 +5,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.4] — 2026-08-01
+
+### Changed
+- **Renamed `oeso:IngestActivity` → `oeso:ArtifactActivity`.** Activities are now
+  uniformly named for the object they produce (`ArtifactActivity` → `Artifact`,
+  `StateActivity` → `State`, `ResolutionActivity` → resolution objects,
+  `AssessmentActivity` → `Assessment`). "Ingest" described an implementation concern
+  (something an ingestor does) rather than the activity's semantic shape; core should
+  describe *what* an activity produces, not *what machinery* performs it. **Breaking.**
+- **Renamed `oeso:EntityAssignment` → `oeso:StateAssignment`** and
+  `oeso:EntityAssignmentActivity` → `oeso:StateAssignmentActivity`. The prior name
+  obscured *what* was being assigned; a State is assigned to an Entity, and the new
+  name makes the assigned object explicit. **Breaking.**
+- Updated the `generatedByActivity` restrictions on `Artifact` and `StateAssignment`
+  to point at the renamed activity classes (`onClass ArtifactActivity`,
+  `onClass StateAssignmentActivity`), and updated the corresponding disjointness axioms.
+
+### Removed
+- **Removed `oeso:attributeMappingScore`.** Scoring is policy, not core structure —
+  it presumes a particular scoring scheme — and belongs in extending ontologies
+  (MDPO or a domain layer), consistent with the earlier removal of scoring/confidence
+  fields from core. **Breaking** for any consumer referencing the property.
+
+### Migration
+- `IngestActivity` → `ArtifactActivity`
+- `EntityAssignment` → `StateAssignment`
+- `EntityAssignmentActivity` → `StateAssignmentActivity`
+- `attributeMappingScore` → removed; move any scoring to MDPO/domain
+
 ## [oeso-0.2.3] — 2026-07-30
 
 ### Changed
