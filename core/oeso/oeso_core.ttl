@@ -221,11 +221,11 @@ oeso:Activity
           owl:onProperty prov:endedAtTime ;
           owl:maxCardinality "1"^^xsd:nonNegativeInteger ] .
 
-oeso:IngestActivity
+oeso:ArtifactActivity
     a               owl:Class ;
     rdfs:subClassOf oeso:Activity ;
-    rdfs:label      "Ingest Activity" ;
-    rdfs:comment    "An activity that retrieves, receives, captures, or otherwise acquires external information and generates one or more Artifacts. Concrete ingestion methods and platform execution details belong in extending vocabularies." .
+    rdfs:label      "Artifact Activity" ;
+    rdfs:comment    "An activity that retrieves, receives, captures, or otherwise acquires external information and generates one or more Artifacts."
 
 oeso:StateActivity
     a               owl:Class ;
